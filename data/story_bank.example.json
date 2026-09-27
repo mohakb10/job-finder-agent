@@ -1,0 +1,15 @@
+{
+  "_comment": "Each entry is a STAR-shaped story the Answer Agent can draw from. Replace this whole file's content with your own real stories via story_bank.seed.json -- see local README below.",
+  "stories": [
+    {
+      "slug": "example_story",
+      "competencies": ["ownership", "production_ml", "quantified_impact"],
+      "title": "Example: shipping a production system end-to-end",
+      "situation": "Describe the problem/context here.",
+      "task": "What you specifically owned.",
+      "action": "What you actually did -- the specific technical/strategic decisions.",
+      "result": "The measurable outcome.",
+      "good_for_questions": ["Tell me about a time you owned a project end-to-end"]
+    }
+  ]
+}

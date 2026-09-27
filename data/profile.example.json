@@ -1,0 +1,45 @@
+{
+  "name": "Jane Example",
+  "email": "jane.example@email.com",
+  "phone": "555-123-4567",
+  "location": "New York, New York",
+  "linkedin": "linkedin.com/in/jane-example",
+  "current_title": "Data Scientist II",
+  "current_company": "Example Corp",
+  "years_experience": 4,
+
+  "target": {
+    "titles": [
+      "Senior Data Scientist",
+      "Data Scientist III",
+      "Applied Scientist",
+      "Machine Learning Engineer"
+    ],
+    "seniority_min": "mid-level",
+    "seniority_max": "senior",
+    "domains_preferred": [
+      "your domain here, e.g. cybersecurity, fintech risk, healthcare ML"
+    ],
+    "domains_acceptable": [
+      "adjacent domains you'd consider"
+    ],
+    "domains_avoid": [
+      "roles with no ML modeling component",
+      "pure BI / reporting analyst roles"
+    ],
+    "locations": ["Your City, ST", "Remote (US)"],
+    "work_auth": "e.g. US Citizen / Authorized to work in the US without sponsorship",
+    "comp_floor_usd": null,
+    "must_haves": [
+      "role involves building/owning ML models, not just dashboards"
+    ],
+    "nice_to_haves": [
+      "things that would be a bonus but aren't required"
+    ]
+  },
+
+  "search_queries_seed": [
+    "Example search query one",
+    "Example search query two"
+  ]
+}

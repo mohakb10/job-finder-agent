@@ -1,0 +1,7 @@
+.env
+venv/
+__pycache__/
+*.pyc
+data/*.seed.json
+data/pipeline.db
+output/*.pdf

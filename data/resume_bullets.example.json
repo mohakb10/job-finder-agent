@@ -1,0 +1,51 @@
+{
+  "header": {
+    "name": "JANE EXAMPLE",
+    "title": "Data Scientist",
+    "location": "New York, New York",
+    "phone": "555-123-4567",
+    "email": "jane.example@email.com",
+    "linkedin": "linkedin.com/in/jane-example"
+  },
+
+  "education": [
+    {
+      "school": "Example University",
+      "dates": "August 2023 \u2013 May 2025",
+      "degree": "M.S. in Data Science"
+    }
+  ],
+
+  "skills": {
+    "Data & ML": "Python, SQL, PyTorch, ...",
+    "Notable Concepts": "Anomaly detection, ...",
+    "Infrastructure": "AWS, GCP, ...",
+    "Visualization / Reporting": "Tableau, ..."
+  },
+
+  "_comment_bullets": "Each bullet has a fixed core claim (fact-checked, never altered) and a small list of pre-approved phrasing variants the tailoring agent may choose between. It may reorder bullets and swap phrasing variants; it may never invent a new bullet or change a number/fact. Replace this whole file's content with your own real experience via resume_bullets.seed.json -- see local README below.",
+
+  "experience": [
+    {
+      "id": "example_job",
+      "company": "Example Corp",
+      "role": "Data Scientist II",
+      "dates": "January 2022 \u2013 Present",
+      "context": null,
+      "bullets": [
+        {
+          "id": "example_b1",
+          "tags": ["production_ml", "quantified_impact"],
+          "default": "Example bullet: Led an end-to-end project that shipped X, improving Y by Z%.",
+          "variants": [
+            "Example bullet: Owned an end-to-end project shipping X, improving Y by Z%."
+          ]
+        }
+      ]
+    }
+  ],
+
+  "projects": [],
+
+  "extracurricular": []
+}
