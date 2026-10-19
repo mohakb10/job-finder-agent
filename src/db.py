@@ -66,13 +66,13 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def insert_job(job: dict) -> int:
+def insert_job(job: dict, status: str = "discovered") -> int:
     with get_conn() as conn:
         cur = conn.execute(
             """INSERT INTO jobs
             (company, title, location, apply_url, posting_source, description,
              fit_score, fit_reasoning, status, discovered_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'discovered', ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 job["company"],
                 job["title"],
@@ -82,6 +82,7 @@ def insert_job(job: dict) -> int:
                 job.get("description"),
                 job.get("fit_score"),
                 job.get("fit_reasoning"),
+                status,
                 now(),
             ),
         )
@@ -120,7 +121,9 @@ def get_job(job_id: int) -> dict:
 def update_job_status(job_id: int, status: str, **fields):
     fields["status"] = status
     if status == "applied":
-        fields.setdefault("applied_at", now())
+        existing = get_job(job_id)
+        if not (existing and existing.get("applied_at")):
+            fields.setdefault("applied_at", now())
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     values = list(fields.values()) + [job_id]
     with get_conn() as conn:
@@ -176,3 +179,39 @@ def log_usage(agent: str, model: str, usage, job_id: int = None):
                 now(),
             ),
         )
+
+
+EDITABLE_JOB_FIELDS = {
+    "company", "title", "location", "apply_url", "posting_source",
+    "description", "notes", "fit_score", "fit_reasoning",
+}
+
+
+def update_job_fields(job_id: int, **fields):
+    """Update plain text fields on a job (used by the UI editors)."""
+    fields = {k: v for k, v in fields.items() if k in EDITABLE_JOB_FIELDS}
+    if not fields:
+        return
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    with get_conn() as conn:
+        conn.execute(
+            f"UPDATE jobs SET {set_clause} WHERE id = ?",
+            list(fields.values()) + [job_id],
+        )
+
+
+def delete_job(job_id: int):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM application_questions WHERE job_id = ?", (job_id,))
+        conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+
+
+def get_usage_summary() -> dict:
+    with get_conn() as conn:
+        row = conn.execute(
+            """SELECT COUNT(*) AS calls,
+                      COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                      COALESCE(SUM(output_tokens), 0) AS output_tokens
+               FROM llm_usage_log"""
+        ).fetchone()
+        return dict(row)

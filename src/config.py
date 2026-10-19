@@ -12,8 +12,8 @@ OUTPUT_DIR = ROOT / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
-CLAUDE_ANALYST_MODEL = os.environ.get("CLAUDE_ANALYST_MODEL", "claude-opus-4-8")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5")
+CLAUDE_ANALYST_MODEL = os.environ.get("CLAUDE_ANALYST_MODEL", "claude-opus-5-5")
 DB_PATH = ROOT / os.environ.get("DB_PATH", "data/pipeline.db")
 
 

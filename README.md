@@ -33,7 +33,7 @@ review everything and submit applications yourself.
   anything, just writes you a report.
 - **Pipeline** -- a SQLite table (`data/pipeline.db`, created on first run)
   tracking each job through `discovered -> approved -> applied -> interview
-  -> offer / rejected / withdrawn`.
+  -> offer`, or out of the pipeline as `rejected`, `skipped` or `withdrawn`.
 
 ## Setup
 
@@ -66,6 +66,30 @@ Also sanity-check **`data/profile.seed.json`** -- especially `target.titles`,
 `domains_avoid`, and `search_queries_seed` -- since that's what the search
 agent optimizes for.
 
+## The web UI
+
+```bash
+source venv/bin/activate
+streamlit run app.py
+```
+
+This opens a page in your browser (usually http://localhost:8501). It reads and
+writes the same `data/pipeline.db` as the CLI, so you can mix the two freely.
+
+- **Dashboard**: your whole search as one strip (to review, to apply, applied,
+  interviewing, offer), plus what is waiting for review, what needs a follow-up
+  after 14 days, applications per week, and the spread of fit scores.
+- **Pipeline**: filterable table of every job. Open one to change its status,
+  paste the full posting text, keep notes, generate and preview the tailored
+  resume PDF, and draft answers to application questions. You can also add a
+  job you found yourself.
+- **Search**: run the search agent and approve or skip what it finds.
+- **Analyst**: run the pipeline analysis and keep the latest report.
+
+Search results only include a short summary of each role. Before tailoring a
+resume, paste the full posting into the job's Overview tab, since tailoring can
+only emphasize what the text says.
+
 ## Day-to-day usage
 
 ```bash
@@ -79,7 +103,7 @@ python -m src.cli show 3
 
 # 3. Approve the ones worth applying to
 python -m src.cli promote 3
-python -m src.cli reject 4          # not a fit, get it out of the queue
+python -m src.cli reject 4          # not a fit, marks it skipped
 
 # 4. Generate a tailored resume for an approved job
 python -m src.cli tailor 3          # writes output/resume_3_CompanyName.pdf
@@ -109,11 +133,9 @@ Run `python -m src.cli --help` any time for the full command list.
   auto-filling real forms while actively job hunting is a good way to
   break an application you cared about. Tailoring + drafting is the
   leverage; submitting is 30 seconds of your own attention.
-- **No web app / auth / hosted DB.** It's a single-user CLI against a local
-  SQLite file. If this becomes something you want a UI for later, a
-  Streamlit page over the same `db.py` functions would be a small addition
-  (see `ROADMAP.md` below for the natural extension points, if you add
-  one).
+- **Local only, no auth or hosted DB.** The CLI and the Streamlit UI are two
+  front ends on the same local SQLite file (`src/db.py`) and the same service
+  layer (`src/services.py`), so there is one place where behavior lives.
 - **Bounded resume tailoring.** The tailoring agent choosing from a fixed
   bullet + pre-approved-synonym inventory (rather than freeform rewriting)
   means you can trust every generated resume is factually identical to
@@ -125,6 +147,6 @@ Run `python -m src.cli --help` any time for the full command list.
 Natural next additions, roughly in order of value if you keep using this:
 1. A `dedupe`/refresh command that re-scores `discovered` jobs if you tweak
    `profile.json` criteria mid-search.
-2. A cost dashboard reading `llm_usage_log` (already logged on every call).
+2. A per-run cost breakdown from `llm_usage_log` (the dashboard already shows totals).
 3. A `local/` folder pattern like the original project if you ever want to
    version-control this without committing your real resume/story data.

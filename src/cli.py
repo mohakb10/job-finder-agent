@@ -3,22 +3,16 @@ from tabulate import tabulate
 
 from src.agents.analyst_agent import is_eligible_for_analysis, run_analysis
 from src.agents.answer_agent import draft_answer
-from src.agents.search_agent import search_jobs
-from src.agents.tailor_agent import tailor_resume
-from src.config import OUTPUT_DIR
 from src.db import (
     add_question,
     approve_answer,
     get_job,
     init_db,
-    insert_job,
-    job_exists,
     list_jobs,
     list_questions,
-    set_tailored_resume,
     update_job_status,
 )
-from src.resume_pdf import render_resume_pdf
+from src.services import run_search, tailor_for_job
 
 
 @click.group()
@@ -39,22 +33,15 @@ def setup():
 def search(notes):
     """Run the Job Search Agent and add new suggestions to the pipeline as 'discovered'."""
     click.echo("Searching for openings... (this makes several web searches, may take a minute)")
-    suggestions = search_jobs(extra_instructions=notes)
-
-    added, skipped = 0, 0
-    for job in suggestions:
-        if job_exists(job["company"], job["title"], job.get("apply_url")):
-            skipped += 1
-            continue
-        insert_job(job)
-        added += 1
-
+    added, skipped, malformed = run_search(notes=notes)
     click.echo(f"Added {added} new suggestion(s), skipped {skipped} already in pipeline.")
+    if malformed:
+        click.echo(f"Ignored {malformed} result(s) that were missing a company or title.")
     click.echo("Run 'python -m src.cli list --status discovered' to review them.")
 
 
 @cli.command(name="list")
-@click.option("--status", default=None, help="Filter by status (discovered, reviewing, approved, applied, interview, offer, rejected, withdrawn)")
+@click.option("--status", default=None, help="Filter by status (discovered, approved, applied, interview, offer, rejected, skipped, withdrawn)")
 def list_cmd(status):
     """List jobs in the pipeline."""
     jobs = list_jobs(status=status)
@@ -96,30 +83,21 @@ def promote(job_id):
 @click.argument("job_id", type=int)
 def reject(job_id):
     """Mark a job as rejected/not a fit -- removes it from your active review queue."""
-    update_job_status(job_id, "withdrawn")
-    click.echo(f"Job {job_id} marked withdrawn.")
+    update_job_status(job_id, "skipped")
+    click.echo(f"Job {job_id} marked skipped.")
 
 
 @cli.command()
 @click.argument("job_id", type=int)
 def tailor(job_id):
     """Generate a tailored resume PDF for an approved job."""
-    job = get_job(job_id)
-    if not job:
-        click.echo("Job not found.")
-        return
-    if not job.get("description"):
-        click.echo("This job has no description saved -- add one with a DB edit or re-run search with better notes.")
-        return
-
     click.echo("Tailoring resume...")
-    tailored = tailor_resume(job["description"])
-    click.echo(f"Emphasis: {tailored['summary_of_emphasis']}")
-
-    safe_company = "".join(c for c in job["company"] if c.isalnum())[:30]
-    out_path = OUTPUT_DIR / f"resume_{job_id}_{safe_company}.pdf"
-    render_resume_pdf(tailored, str(out_path))
-    set_tailored_resume(job_id, str(out_path))
+    try:
+        out_path, emphasis = tailor_for_job(job_id)
+    except ValueError as e:
+        click.echo(str(e))
+        return
+    click.echo(f"Emphasis: {emphasis}")
     click.echo(f"Saved: {out_path}")
     click.echo("Review it before attaching to any real application.")
 
@@ -174,9 +152,9 @@ def applied(job_id):
 
 @cli.command()
 @click.argument("job_id", type=int)
-@click.argument("new_status", type=click.Choice(["interview", "offer", "rejected", "withdrawn"]))
+@click.argument("new_status", type=click.Choice(["interview", "offer", "rejected", "skipped", "withdrawn"]))
 def status(job_id, new_status):
-    """Update a job's status as things progress (interview, offer, rejected, withdrawn)."""
+    """Update a job's status as things progress (interview, offer, rejected, skipped, withdrawn)."""
     update_job_status(job_id, new_status)
     click.echo(f"Job {job_id} marked {new_status}.")
 
