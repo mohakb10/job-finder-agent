@@ -1,16 +1,19 @@
 """
 Resume Tailoring Agent
 ----------------------
-Given a job description, decides:
-  - which bullets to include under each job/project (from the fixed inventory)
-  - what order to put them in
+Given a job description, decides, for every experience and project entry in
+your resume file:
+  - what order to put its bullets in
   - which pre-approved phrasing variant of each bullet to use
 
 It can NEVER invent a new bullet, edit a number, or write freeform text --
 every bullet id and variant text returned by the model is re-validated
-against the source-of-truth resume_bullets.json before anything is rendered.
-If the model returns anything not found in the allowed set, that section
-falls back to the default bullet order/phrasing.
+against the source-of-truth resume_bullets.seed.json before anything is
+rendered. If the model returns anything not found in the allowed set, that
+section falls back to the default bullet order/phrasing.
+
+Sections are read from the resume file, so adding a job or project, or
+changing how many bullets one has, needs no code changes.
 """
 import json
 import re
@@ -22,13 +25,13 @@ from src.db import log_usage
 
 SYSTEM_PROMPT = """You are tailoring a resume for a specific job posting.
 
-You may ONLY do two things per section (Vectra AI experience, Meta experience,
-Capstone project):
-1. Reorder the bullets within that section (you may not move bullets between
-   sections, and you may not add or remove bullets -- all bullets for a
-   section must appear exactly once).
-2. For each bullet, choose ONE version of its text: either "default" or one
-   of its "variants" -- verbatim, no edits.
+The resume has several sections (jobs and projects), listed in the inventory
+below. You may ONLY do two things per section:
+1. Reorder the bullets within that section. You may not move bullets between
+   sections, and you may not add or remove bullets: every bullet of a
+   section must appear exactly once.
+2. For each bullet, choose ONE version of its text: either its "default" or
+   one of its "variants", copied verbatim, no edits.
 
 You must NOT invent new bullets, new numbers, new claims, or edit the
 wording of a chosen version in any way. Pick the ordering and phrasing that
@@ -37,20 +40,37 @@ best emphasizes relevance to the target job description below.
 Job description:
 {job_description}
 
-Resume bullet inventory (JSON):
+Resume inventory (JSON). Each section has an "id" and a list of bullets:
 {resume_json}
+
+Sections and how many bullets each must contain in your answer:
+{section_summary}
 
 Respond with ONLY JSON (no markdown fences, no other text) in this exact shape:
 {{
-  "vectra_order": ["<bullet_id>", ...all 5 vectra bullet ids in your chosen order...],
-  "vectra_text_choice": {{"<bullet_id>": "default_or_variant_text_chosen_verbatim", ...}},
-  "meta_order": ["<bullet_id>", ...all 3 meta bullet ids...],
-  "meta_text_choice": {{"<bullet_id>": "...", ...}},
-  "capstone_order": ["<bullet_id>", ...all 2 capstone bullet ids...],
-  "capstone_text_choice": {{"<bullet_id>": "...", ...}},
+  "sections": {{
+    "<section_id>": {{
+      "order": ["<bullet_id>", "..."],
+      "text_choice": {{"<bullet_id>": "<default or variant text, verbatim>"}}
+    }}
+  }},
   "summary_of_emphasis": "1-2 sentences on what you emphasized and why"
 }}
+Include every section id listed above.
 """
+
+
+def resume_sections(resume: dict) -> list:
+    """Every experience and project entry, in the order they appear on the resume."""
+    return list(resume.get("experience", [])) + list(resume.get("projects", []))
+
+
+def default_sections(resume: dict) -> dict:
+    """The untailored resume: every section in its file order with default text."""
+    return {
+        s["id"]: [{"id": b["id"], "text": b["default"]} for b in s["bullets"]]
+        for s in resume_sections(resume)
+    }
 
 
 def _extract_json(text: str) -> dict:
@@ -64,20 +84,24 @@ def _extract_json(text: str) -> dict:
 
 def _validate_section(section: dict, chosen_order: list, chosen_text: dict) -> list:
     """
-    Returns a validated, ordered list of (bullet_id, text) tuples for a
-    section. Falls back to default order/text for anything the model got
-    wrong so a bad response degrades gracefully instead of corrupting the
-    resume.
+    Returns a validated, ordered list of {"id", "text"} dicts for a section.
+    Falls back to default order/text for anything the model got wrong so a
+    bad response degrades gracefully instead of corrupting the resume.
     """
     bullets_by_id = {b["id"]: b for b in section["bullets"]}
-    valid_ids = set(bullets_by_id.keys())
 
-    order = [bid for bid in chosen_order if bid in valid_ids]
+    order = []
+    for bid in chosen_order if isinstance(chosen_order, list) else []:
+        # Ignore unknown ids and repeats.
+        if bid in bullets_by_id and bid not in order:
+            order.append(bid)
     # Add back any missing ids (in default order) so nothing gets silently dropped
     for bid in bullets_by_id:
         if bid not in order:
             order.append(bid)
 
+    if not isinstance(chosen_text, dict):
+        chosen_text = {}
     result = []
     for bid in order:
         bullet = bullets_by_id[bid]
@@ -88,27 +112,49 @@ def _validate_section(section: dict, chosen_order: list, chosen_text: dict) -> l
     return result
 
 
+def validate_tailoring(resume: dict, raw: dict) -> dict:
+    """Turn a raw model answer into a safe {"sections": ..., "summary_of_emphasis": ...}."""
+    raw_sections = raw.get("sections") if isinstance(raw.get("sections"), dict) else {}
+    sections = {}
+    for section in resume_sections(resume):
+        choice = raw_sections.get(section["id"])
+        choice = choice if isinstance(choice, dict) else {}
+        sections[section["id"]] = _validate_section(
+            section, choice.get("order", []), choice.get("text_choice", {})
+        )
+    return {"sections": sections, "summary_of_emphasis": str(raw.get("summary_of_emphasis", ""))}
+
+
 def tailor_resume(job_description: str) -> dict:
     """
-    Returns a dict with validated section orderings/text plus the model's
-    stated emphasis rationale, ready to hand to the PDF renderer.
+    Returns {"sections": {section_id: [{"id", "text"}, ...]}, "summary_of_emphasis": str},
+    ready to hand to the PDF renderer.
     """
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     resume = load_resume()
 
-    vectra_section = next(e for e in resume["experience"] if e["id"] == "vectra")
-    meta_section = next(e for e in resume["experience"] if e["id"] == "meta")
-    capstone_section = resume["projects"][0]
+    # Only the sections the agent may reorder go to the model, not your contact details.
+    inventory = {
+        "experience": resume.get("experience", []),
+        "projects": resume.get("projects", []),
+    }
+    section_summary = "\n".join(
+        '- "{}" ({}): {} bullet{}'.format(
+            s["id"], s.get("company") or s.get("name"), len(s["bullets"]), "" if len(s["bullets"]) == 1 else "s"
+        )
+        for s in resume_sections(resume)
+    )
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=2000,
+        max_tokens=3000,
         messages=[
             {
                 "role": "user",
                 "content": SYSTEM_PROMPT.format(
                     job_description=job_description,
-                    resume_json=json.dumps(resume, indent=2),
+                    resume_json=json.dumps(inventory, indent=2),
+                    section_summary=section_summary,
                 ),
             }
         ],
@@ -118,20 +164,4 @@ def tailor_resume(job_description: str) -> dict:
     text = "\n".join(
         b.text for b in response.content if getattr(b, "type", None) == "text"
     )
-    raw = _extract_json(text)
-
-    validated = {
-        "vectra": _validate_section(
-            vectra_section, raw.get("vectra_order", []), raw.get("vectra_text_choice", {})
-        ),
-        "meta": _validate_section(
-            meta_section, raw.get("meta_order", []), raw.get("meta_text_choice", {})
-        ),
-        "capstone": _validate_section(
-            capstone_section,
-            raw.get("capstone_order", []),
-            raw.get("capstone_text_choice", {}),
-        ),
-        "summary_of_emphasis": raw.get("summary_of_emphasis", ""),
-    }
-    return validated
+    return validate_tailoring(resume, _extract_json(text))

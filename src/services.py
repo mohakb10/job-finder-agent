@@ -35,10 +35,31 @@ def run_search(notes=None, max_searches=12):
     return added, skipped, malformed
 
 
+def page_warning(pages):
+    """A sentence to show when a resume runs past one page, else None."""
+    if pages <= 1:
+        return None
+    return (
+        "This resume runs to {} pages. Most application systems expect one. "
+        "Shorten a bullet or two in resume_bullets.seed.json, then tailor again.".format(pages)
+    )
+
+
+def preview_resume():
+    """Render the untailored resume to output/resume_preview.pdf.
+
+    Returns (pdf_path, pages). Needs no API key, so it is a quick way to
+    check a resume edit.
+    """
+    out_path = OUTPUT_DIR / "resume_preview.pdf"
+    pages = render_resume_pdf({}, str(out_path))
+    return str(out_path), pages
+
+
 def tailor_for_job(job_id):
     """Generate a tailored resume PDF for a job.
 
-    Returns (pdf_path, summary_of_emphasis).
+    Returns (pdf_path, summary_of_emphasis, pages).
     """
     job = get_job(job_id)
     if not job:
@@ -49,6 +70,6 @@ def tailor_for_job(job_id):
     tailored = tailor_resume(job["description"])
     safe_company = "".join(c for c in job["company"] if c.isalnum())[:30]
     out_path = OUTPUT_DIR / "resume_{}_{}.pdf".format(job_id, safe_company)
-    render_resume_pdf(tailored, str(out_path))
+    pages = render_resume_pdf(tailored, str(out_path))
     set_tailored_resume(job_id, str(out_path))
-    return str(out_path), tailored.get("summary_of_emphasis", "")
+    return str(out_path), tailored.get("summary_of_emphasis", ""), pages

@@ -107,6 +107,7 @@ python -m src.cli reject 4          # not a fit, marks it skipped
 
 # 4. Generate a tailored resume for an approved job
 python -m src.cli tailor 3          # writes output/resume_3_CompanyName.pdf
+python -m src.cli preview-resume     # render your untailored resume (no API call), after editing it
 
 # 5. Draft answers to any short-answer questions on the application
 python -m src.cli ask 3 "Why are you interested in this role?"

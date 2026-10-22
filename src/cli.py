@@ -12,7 +12,7 @@ from src.db import (
     list_questions,
     update_job_status,
 )
-from src.services import run_search, tailor_for_job
+from src.services import page_warning, preview_resume, run_search, tailor_for_job
 
 
 @click.group()
@@ -93,13 +93,26 @@ def tailor(job_id):
     """Generate a tailored resume PDF for an approved job."""
     click.echo("Tailoring resume...")
     try:
-        out_path, emphasis = tailor_for_job(job_id)
+        out_path, emphasis, pages = tailor_for_job(job_id)
     except ValueError as e:
         click.echo(str(e))
         return
     click.echo(f"Emphasis: {emphasis}")
     click.echo(f"Saved: {out_path}")
+    warning = page_warning(pages)
+    if warning:
+        click.echo(f"Warning: {warning}")
     click.echo("Review it before attaching to any real application.")
+
+
+@cli.command(name="preview-resume")
+def preview_resume_cmd():
+    """Render your untailored resume (no API call). Use it after editing resume_bullets.seed.json."""
+    out_path, pages = preview_resume()
+    click.echo(f"Saved: {out_path} ({pages} page{'s' if pages != 1 else ''})")
+    warning = page_warning(pages)
+    if warning:
+        click.echo(f"Warning: {warning}")
 
 
 @cli.command()

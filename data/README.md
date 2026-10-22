@@ -25,3 +25,27 @@ which file to create.
 
 Just edit the `.seed.json` files directly -- they're never touched by git,
 so there's nothing to sync or worry about conflicting with the repo.
+
+## Updating your resume
+
+`resume_bullets.seed.json` is the source of truth for every tailored PDF.
+It has a list of `experience` entries and a list of `projects`, each with
+its own bullets, and the code reads whatever is there. You can add or remove
+a job or project, or change how many bullets it has, without touching any code.
+
+For each bullet:
+
+- `default` is the exact text from your resume.
+- `variants` are other wordings you are happy to send. The tailoring agent
+  may pick one of these instead of the default. Leave it as `[]` if you want
+  that bullet to always read the same.
+- `id` must be unique across the whole file.
+
+After any edit, run:
+
+```bash
+python -m src.cli preview-resume
+```
+
+It renders your untailored resume to `output/resume_preview.pdf` (no API call)
+and tells you if it runs past one page.

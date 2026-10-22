@@ -7,45 +7,68 @@
     "email": "jane.example@email.com",
     "linkedin": "linkedin.com/in/jane-example"
   },
-
   "education": [
     {
       "school": "Example University",
-      "dates": "August 2023 \u2013 May 2025",
+      "dates": "August 2023 – May 2025",
       "degree": "M.S. in Data Science"
     }
   ],
-
   "skills": {
     "Data & ML": "Python, SQL, PyTorch, ...",
     "Notable Concepts": "Anomaly detection, ...",
     "Infrastructure": "AWS, GCP, ...",
     "Visualization / Reporting": "Tableau, ..."
   },
-
-  "_comment_bullets": "Each bullet has a fixed core claim (fact-checked, never altered) and a small list of pre-approved phrasing variants the tailoring agent may choose between. It may reorder bullets and swap phrasing variants; it may never invent a new bullet or change a number/fact. Replace this whole file's content with your own real experience via resume_bullets.seed.json -- see local README below.",
-
+  "_comment_bullets": "Each experience and project entry has an id and a list of bullets. A bullet has a fixed 'default' text (fact-checked, never altered) and optional 'variants' (alternate wordings you have approved). The tailoring agent may reorder the bullets inside an entry and pick the default or one variant for each; it can never invent a bullet or change a number. Add, remove or reword entries freely: nothing in the code depends on how many there are. Keep the text of each default identical to your real resume. Put your real version in resume_bullets.seed.json (see data/README.md).",
   "experience": [
     {
       "id": "example_job",
       "company": "Example Corp",
       "role": "Data Scientist II",
-      "dates": "January 2022 \u2013 Present",
-      "context": null,
+      "dates": "January 2022 – Present",
+      "context": "One line about the company, shown in italics under the role (or null).",
       "bullets": [
         {
-          "id": "example_b1",
-          "tags": ["production_ml", "quantified_impact"],
+          "id": "example_job_b1",
+          "tags": [
+            "production_ml",
+            "quantified_impact"
+          ],
           "default": "Example bullet: Led an end-to-end project that shipped X, improving Y by Z%.",
           "variants": [
             "Example bullet: Owned an end-to-end project shipping X, improving Y by Z%."
           ]
+        },
+        {
+          "id": "example_job_b2",
+          "tags": [
+            "analytics"
+          ],
+          "default": "Example bullet: Built dashboards that helped the team decide X.",
+          "variants": []
         }
       ]
     }
   ],
-
-  "projects": [],
-
-  "extracurricular": []
+  "projects": [
+    {
+      "id": "example_project",
+      "name": "Example Project: what it is | where it was shown",
+      "dates": "September 2026",
+      "bullets": [
+        {
+          "id": "example_project_b1",
+          "tags": [
+            "team_collaboration"
+          ],
+          "default": "Example bullet: Built X with a 3-person team, presented to Y.",
+          "variants": []
+        }
+      ]
+    }
+  ],
+  "extracurricular": [
+    "Example: club, team or volunteering line"
+  ]
 }

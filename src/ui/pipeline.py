@@ -18,7 +18,7 @@ from src.db import (
     update_job_fields,
     update_job_status,
 )
-from src.services import ACTIVE_STAGES, ALL_STATUSES, tailor_for_job
+from src.services import ACTIVE_STAGES, ALL_STATUSES, page_warning, tailor_for_job
 from src.ui.common import (
     NEXT_ACTIONS,
     STATUS_LABELS,
@@ -211,8 +211,9 @@ def _resume_tab(job):
         if require_api_key():
             with st.spinner("Tailoring your resume..."):
                 try:
-                    path, emphasis = tailor_for_job(jid)
+                    path, emphasis, pages = tailor_for_job(jid)
                     st.session_state["emphasis_{}".format(jid)] = emphasis
+                    st.session_state["pages_{}".format(jid)] = pages
                     job = get_job(jid)
                 except Exception as e:  # surface API/network problems in the page
                     st.error("Could not tailor the resume: {}".format(e))
@@ -222,6 +223,9 @@ def _resume_tab(job):
         emphasis = st.session_state.get("emphasis_{}".format(jid))
         if emphasis:
             st.markdown("**What it emphasized:** {}".format(emphasis))
+        warning = page_warning(st.session_state.get("pages_{}".format(jid), 1))
+        if warning:
+            st.warning(warning)
         _pdf_preview(path)
         st.caption("Read it through before you attach it to a real application.")
 
