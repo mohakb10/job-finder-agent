@@ -27,7 +27,8 @@
       "roles with no ML modeling component",
       "pure BI / reporting analyst roles"
     ],
-    "locations": ["Your City, ST", "Remote (US)"],
+    "locations": ["New York, NY", "San Francisco Bay Area, CA", "Remote only if the company has an office in one of these"],
+    "max_years_required": 4,
     "work_auth": "e.g. US Citizen / Authorized to work in the US without sponsorship",
     "comp_floor_usd": null,
     "must_haves": [

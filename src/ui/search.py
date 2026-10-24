@@ -48,10 +48,10 @@ def render():
         if require_api_key():
             with st.spinner("Searching the web. This usually takes a minute or two."):
                 try:
-                    added, skipped, malformed = run_search(
+                    added, skipped, malformed, filtered = run_search(
                         notes=notes.strip() or None, max_searches=max_searches
                     )
-                    st.session_state["last_search"] = (added, skipped, malformed)
+                    st.session_state["last_search"] = (added, skipped, malformed, filtered)
                 except ValueError:
                     st.session_state.pop("last_search", None)
                     st.error(
@@ -64,10 +64,12 @@ def render():
 
     last = st.session_state.get("last_search")
     if last:
-        added, skipped, malformed = last
+        added, skipped, malformed, filtered = last
         msg = "Added {} new role{}".format(added, "" if added == 1 else "s")
         if skipped:
             msg += ", skipped {} you already have".format(skipped)
+        if filtered:
+            msg += ", dropped {} outside NYC/SF or needing too many years".format(filtered)
         if malformed:
             msg += ", ignored {} with missing details".format(malformed)
         st.success(msg + ".")

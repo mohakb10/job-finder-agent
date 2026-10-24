@@ -19,9 +19,10 @@ SUBMITTED_STATUSES = ["applied", "interview", "offer", "rejected"]
 def run_search(notes=None, max_searches=12):
     """Run the Search Agent and store anything new as 'discovered'.
 
-    Returns (added, skipped_duplicates, malformed).
+    Returns (added, skipped_duplicates, malformed, filtered_out), where
+    filtered_out counts postings dropped for location or too many years required.
     """
-    suggestions = search_jobs(extra_instructions=notes, max_searches=max_searches)
+    suggestions, dropped_loc, dropped_exp = search_jobs(extra_instructions=notes, max_searches=max_searches)
     added = skipped = malformed = 0
     for job in suggestions:
         if not job.get("company") or not job.get("title"):
@@ -32,7 +33,7 @@ def run_search(notes=None, max_searches=12):
             continue
         insert_job(job)
         added += 1
-    return added, skipped, malformed
+    return added, skipped, malformed, dropped_loc + dropped_exp
 
 
 def page_warning(pages):

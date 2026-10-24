@@ -33,8 +33,10 @@ def setup():
 def search(notes):
     """Run the Job Search Agent and add new suggestions to the pipeline as 'discovered'."""
     click.echo("Searching for openings... (this makes several web searches, may take a minute)")
-    added, skipped, malformed = run_search(notes=notes)
+    added, skipped, malformed, filtered = run_search(notes=notes)
     click.echo(f"Added {added} new suggestion(s), skipped {skipped} already in pipeline.")
+    if filtered:
+        click.echo(f"Dropped {filtered} posting(s) outside NYC/SF or asking for too many years.")
     if malformed:
         click.echo(f"Ignored {malformed} result(s) that were missing a company or title.")
     click.echo("Run 'python -m src.cli list --status discovered' to review them.")
