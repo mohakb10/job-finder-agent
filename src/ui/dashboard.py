@@ -89,7 +89,7 @@ def render():
             )
             st.button("Go to search", on_click=go_to_page, args=("Search",), key="dash_to_search")
         for job in waiting[:5]:
-            c1, c2 = st.columns([5, 1])
+            c1, c2 = st.columns([3, 1])
             where = job.get("location") or "Location not listed"
             c1.markdown(job_line(job, html.escape(where)), unsafe_allow_html=True)
             c2.button("Open", key="dash_open_{}".format(job["id"]), on_click=go_to_job, args=(job["id"],))
@@ -118,7 +118,7 @@ def render():
                 unsafe_allow_html=True,
             )
         for d, job in overdue[:5]:
-            c1, c2 = st.columns([5, 1])
+            c1, c2 = st.columns([3, 1])
             c1.markdown(
                 job_line(job, '<span class="late">Applied {} days ago</span>'.format(d)),
                 unsafe_allow_html=True,
@@ -143,12 +143,19 @@ def render():
             df = pd.DataFrame(
                 {"week": [pd.Timestamp(w) for w in weeks], "applications": list(weeks.values())}
             )
+            # Whole-number ticks only: list them out while the counts are small.
+            most = max(weeks.values())
+            tick_values = list(range(0, most + 1)) if most <= 12 else None
             chart = (
                 alt.Chart(df)
                 .mark_bar(color=ACCENT, size=26)
                 .encode(
                     x=alt.X("week:T", title=None, axis=alt.Axis(format="%b %d")),
-                    y=alt.Y("applications:Q", title=None, axis=alt.Axis(tickMinStep=1)),
+                    y=alt.Y(
+                        "applications:Q",
+                        title=None,
+                        axis=alt.Axis(tickMinStep=1, values=tick_values),
+                    ),
                     tooltip=[alt.Tooltip("week:T", title="Week of", format="%b %d"), "applications:Q"],
                 )
                 .properties(height=220)
